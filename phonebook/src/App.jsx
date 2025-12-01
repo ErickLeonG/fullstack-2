@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import personService from './services/persons'
+import Notification from './components/Notification'
 
 const Filter = ({ filter, handleFilterChange }) => (
   <div>
@@ -37,6 +38,8 @@ const App = () => {
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [filter, setFilter] = useState('')
+  const [notificationMessage, setNotificationMessage] = useState(null)
+  const [statusMessage, setStatusMessage] = useState('error')
 
   useEffect(() => {
     personService
@@ -56,6 +59,13 @@ const App = () => {
       personService
         .update(persons.find(person => person.name === newName).id, personObject)
         .then(returnedPerson => {
+          setNotificationMessage(
+            `${personObject.name}'s number updated successfully`
+          )
+          setStatusMessage('success')
+          setTimeout(() => {
+            setNotificationMessage(null)
+          }, 3000)
           setPersons(persons.map(person => person.id !== returnedPerson.id ? person : returnedPerson))
           setNewName('')
           setNewNumber('')
@@ -65,6 +75,13 @@ const App = () => {
     personService
       .create(personObject)
       .then(returnedPerson => {
+        setNotificationMessage(
+          `${personObject.name}'s number added successfully`
+        )
+        setStatusMessage('success')
+        setTimeout(() => {
+          setNotificationMessage(null)
+        }, 3000)
         setPersons(persons.concat(returnedPerson))
         setNewName('')
         setNewNumber('')
@@ -76,6 +93,16 @@ const App = () => {
       .borrar(id)
       .then(() => {
         setPersons(prev => prev.filter(person => person.id !== id))
+      })
+      .catch(error => {
+        setNotificationMessage(
+          `Person was already removed from server`
+        )
+        setStatusMessage('error')
+        setTimeout(() => {
+          setNotificationMessage(null)
+        }, 3000)
+        setPersons(persons.filter(n => n.id !== id))
       })
   }
 
@@ -95,6 +122,7 @@ const App = () => {
 
   return (
     <div>
+      <Notification message={notificationMessage} status={statusMessage}/>
       <h2>Phonebook</h2>
         <Filter filter={filter} handleFilterChange={handleFilterChange} />
       <h2>add a new</h2>
