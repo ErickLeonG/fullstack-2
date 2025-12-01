@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
+import personService from './services/persons'
 
 const Filter = ({ filter, handleFilterChange }) => (
   <div>
@@ -21,10 +21,13 @@ const PersonForm = ({ addPerson, newName, handlePersonNameChange, newNumber, han
   </form>
 )
 
-const Persons = ({ persons }) => (
+const Persons = ({ persons, deletePerson }) => (
   <div>
     {persons.map((person) => (
-      <p key={person.name}>{person.name} {person.number}</p>
+      <div key={person.id}>
+        {person.name} {person.number}
+        <button key={person.id} onClick={() => deletePerson(person.id)}>delete</button>
+      </div>
     ))}
   </div>
 )
@@ -36,13 +39,12 @@ const App = () => {
   const [filter, setFilter] = useState('')
 
   useEffect(() => {
-    console.log('effect')
-    axios.get('http://localhost:3001/persons').then((response) => {
-      console.log('promise fulfilled')
-      setPersons(response.data)
-    })
+    personService
+      .getAll()
+      .then(initialPersons => {
+        setPersons(initialPersons)
+      })
   }, [])
-  console.log('render', persons.length, 'persons')
 
   const addPerson = (event) => {
     event.preventDefault()
@@ -51,12 +53,30 @@ const App = () => {
       number: newNumber,
     }
     if(persons.some(person => person.name === newName)) {
-      alert(`${newName} is already added to phonebook`)
+      personService
+        .update(persons.find(person => person.name === newName).id, personObject)
+        .then(returnedPerson => {
+          setPersons(persons.map(person => person.id !== returnedPerson.id ? person : returnedPerson))
+          setNewName('')
+          setNewNumber('')
+        })
       return
     }
-    setPersons(persons.concat(personObject))
-    setNewName('')
-    setNewNumber('')
+    personService
+      .create(personObject)
+      .then(returnedPerson => {
+        setPersons(persons.concat(returnedPerson))
+        setNewName('')
+        setNewNumber('')
+      })
+  }
+
+  const deletePerson = (id) => {
+    personService
+      .borrar(id)
+      .then(() => {
+        setPersons(prev => prev.filter(person => person.id !== id))
+      })
   }
 
   const handlePersonNameChange = (event) => {
@@ -80,7 +100,7 @@ const App = () => {
       <h2>add a new</h2>
         <PersonForm addPerson={addPerson} newName={newName} handlePersonNameChange={handlePersonNameChange} newNumber={newNumber} handlePersonNumberChange={handlePersonNumberChange} />
       <h2>Numbers</h2>
-        <Persons persons={personsToShow} />
+        <Persons persons={personsToShow} deletePerson={deletePerson}/>
     </div>
   )
 }
